@@ -1,34 +1,21 @@
-use bip39::{Mnemonic, MnemonicType, Language};
-
-use bitcoin::hex::DisplayHex;
+use khodpay_bip39::{Mnemonic, WordCount, Language};
 use magnus::{function, prelude::*, Error, Ruby, RClass};
+use hex::{ToHex};
 
-use openssl::hash::MessageDigest;
-
-const SEED_ITERATIONS: usize = 2048;
-pub const SEED_KEY_LENGTH: usize = 64;
+use crate::coincrypto::helpers::RubyErrorConvertible;
 
 fn generate() -> String {
-    Mnemonic::new(MnemonicType::Words12, Language::English).phrase().to_string()
+    Mnemonic::generate(WordCount::Twelve, Language::English).unwrap().phrase().to_string()
 }
 
 fn seed(ruby: &Ruby, mnemonic: String, password: String) -> Result<String, magnus::Error> {
-    Mnemonic::validate(&mnemonic, Language::English)
-        .map_err(|error| magnus::Error::new(ruby.exception_arg_error(), error.to_string()))?;
+    let mnemonic =
+        Mnemonic::from_phrase(&mnemonic, Language::English)
+            .map_err_to_ruby(ruby.exception_arg_error())?;
 
-    let salt = "mnemonic".to_string() + &password;
+    let seed = mnemonic.to_seed(&password).unwrap();
 
-    let mut result = [0u8; SEED_KEY_LENGTH];
-
-    openssl::pkcs5::pbkdf2_hmac(
-        mnemonic.as_bytes(),
-        salt.as_bytes(),
-        SEED_ITERATIONS,
-        MessageDigest::sha512(),
-        &mut result
-    ).unwrap();
-
-    Ok(result.to_lower_hex_string())
+    Ok(seed.encode_hex())
 }
 
 pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
