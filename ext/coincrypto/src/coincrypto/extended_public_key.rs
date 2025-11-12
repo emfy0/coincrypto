@@ -34,11 +34,11 @@ impl ExtendedPublicKeyWrapper {
         Ok(Self { xpub: new_xpriv })
     }
 
-    fn encode(self: &Self) -> String {
+    fn encode(&self) -> String {
         self.xpub.to_string()
     }
 
-    fn public_key_hex(self: &Self) -> String {
+    fn public_key_hex(&self) -> String {
         self.xpub.public_key().to_string()
     }
 
