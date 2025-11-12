@@ -5,8 +5,6 @@ use itertools::Itertools;
 use bitcoin::bip32::DerivationPath;
 use khodpay_bip32::{PublicKey};
 
-// use hex::{ToHex};
-
 use crate::coincrypto::{
     escrow_kind::EscrowKind,
     helpers::RubyErrorConvertible,
@@ -93,6 +91,10 @@ impl Escrow {
         ruby.to_symbol(self_rb.blockchain_network.to_string())
     }
 
+    fn kind(ruby: &Ruby, self_rb: &Self) -> Symbol {
+        ruby.to_symbol(self_rb.kind.to_string())
+    }
+
     fn public_keys(&self) -> Vec<String> {
         self.public_keys.iter().map(|pk| hex::encode(pk.to_bytes())).collect()
     }
@@ -132,10 +134,13 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
         "blockchain_network",
         method!(Escrow::blockchain_network, 0),
     )?;
-
     mnemonic_coincrypto_class.define_method(
         "public_keys",
         method!(Escrow::public_keys, 0),
+    )?;
+    mnemonic_coincrypto_class.define_method(
+        "kind",
+        method!(Escrow::kind, 0),
     )?;
 
     Ok(())
