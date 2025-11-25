@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
+use bitcoin::opcodes::all::OP_CHECKMULTISIG;
+use bitcoin::script::Builder;
 use itertools::Itertools;
 
 use bitcoin::bip32::DerivationPath;
-use khodpay_bip32::{PublicKey};
+use bitcoin::{Address, Network, PublicKey, ScriptBuf};
 
 use crate::coincrypto::{
     escrow_kind::EscrowKind,
@@ -19,13 +21,14 @@ type XpubData = Vec<(PublicKey, (Xfp, DerivationPath))>;
 type XpubDataRuby = Vec<(String, String, String)>;
 
 #[magnus::wrap(class = "CoinCrypto::Escrow")]
+#[derive(Clone)]
 pub struct Escrow {
-    blockchain_network: BlockchainNetwork,
-    kind: EscrowKind,
-    m: u8,
-    public_keys: Vec<PublicKey>,
-    xpub_data: XpubData,
-    sort_public_keys: bool
+    pub blockchain_network: BlockchainNetwork,
+    pub kind: EscrowKind,
+    pub m: usize,
+    pub public_keys: Vec<PublicKey>,
+    pub xpub_data: XpubData,
+    pub sort_public_keys: bool,
 }
 
 impl Escrow {
@@ -33,11 +36,22 @@ impl Escrow {
         ruby: &Ruby,
         blockchain_network: Symbol,
         kind: Symbol,
-        m: u8,
+        m: usize,
         public_keys: Vec<String>,
         xpub_data: Option<XpubDataRuby>,
-        sort_public_keys: bool
+        sort_public_keys: Option<bool>
     ) -> Result<Self, Error> {
+        // TODO: validate quorum against public key size
+
+        let sort_public_keys = sort_public_keys.unwrap_or(false);
+
+        let public_keys =
+            if sort_public_keys {
+                public_keys.into_iter().sorted().collect()
+            } else {
+                public_keys
+            };
+
         let mut parsed_xpub_data = Vec::new();
         if let Some(data) = xpub_data {
             validate_xpub_data(&public_keys, &data)
@@ -96,8 +110,44 @@ impl Escrow {
     }
 
     fn public_keys(&self) -> Vec<String> {
-        self.public_keys.iter().map(|pk| hex::encode(pk.to_bytes())).collect()
+        self.public_keys.iter().map(|pk| pk.to_string()).collect()
     }
+
+    fn redeem_script(&self) -> String {
+        self.get_witness_script().to_hex_string()
+    }
+
+    fn address(&self) -> String {
+        let network = match self.blockchain_network {
+            BlockchainNetwork::BtcTestnet => Network::Testnet,
+            BlockchainNetwork::BtcMainnet => Network::Bitcoin
+
+        };
+
+        Address::p2wsh(&self.get_witness_script(), network).to_string()
+    }
+
+    pub fn btc_blockchain_network(&self) -> Network {
+        match self.blockchain_network {
+            BlockchainNetwork::BtcTestnet => Network::Testnet,
+            BlockchainNetwork::BtcMainnet => Network::Bitcoin
+        }
+    }
+
+    pub fn get_witness_script(&self) -> ScriptBuf {
+        let mut builder = Builder::new()
+            .push_int(self.m as i64);
+
+        for pk in &self.public_keys {
+            builder = builder.push_key(pk);
+        }
+
+        builder
+            .push_int(self.public_keys().len() as i64)
+            .push_opcode(OP_CHECKMULTISIG)
+            .into_script()
+    }
+
 }
 
 fn validate_xpub_data<'a>(
@@ -112,14 +162,9 @@ fn validate_xpub_data<'a>(
     }
 }
 
-const PUBLIC_KEY_ERROR_PREFIX: &str = "Public key parse error";
-
 fn parse_public_key_hex(public_key: &str) -> Result<PublicKey, String> {
-    let decoded_pk = hex::decode(public_key)
-        .map_err(|e| format!("{PUBLIC_KEY_ERROR_PREFIX} ({public_key:?}): {} - {e}", e.inspect()))?;
-
-    PublicKey::from_bytes(&decoded_pk)
-        .map_err(|e| format!("{PUBLIC_KEY_ERROR_PREFIX} ({decoded_pk:?}): {} - {e}", e.inspect()))
+    PublicKey::from_str(&public_key)
+        .map_err(|e| format!("Public key parse error ({public_key:?}): {} - {e}", e.inspect()))
 }
 
 pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
@@ -141,6 +186,14 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
     mnemonic_coincrypto_class.define_method(
         "kind",
         method!(Escrow::kind, 0),
+    )?;
+    mnemonic_coincrypto_class.define_method(
+        "client_data",
+        method!(Escrow::redeem_script, 0),
+    )?;
+    mnemonic_coincrypto_class.define_method(
+        "address",
+        method!(Escrow::address, 0),
     )?;
 
     Ok(())

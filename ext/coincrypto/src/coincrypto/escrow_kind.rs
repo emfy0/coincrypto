@@ -1,5 +1,6 @@
 use std::{fmt, convert::TryFrom};
 
+#[derive(Clone, Copy)]
 pub enum EscrowKind {
     P2WSH
 }
