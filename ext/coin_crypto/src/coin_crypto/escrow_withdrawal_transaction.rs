@@ -1,4 +1,4 @@
-use std::{cell::RefCell, str::FromStr};
+use std::{cell::RefCell, str::FromStr, usize};
 
 use crate::coin_crypto::{
     blockchain_network::{ BlockchainNetwork },
@@ -8,21 +8,7 @@ use crate::coin_crypto::{
 };
 
 use bitcoin::{
-    bip32::Fingerprint,
-    consensus,
-    key::Secp256k1,
-    opcodes,
-    psbt::{ Input as PsbtIn },
-    Address,
-    Amount,
-    OutPoint,
-    PrivateKey,
-    Psbt,
-    PublicKey,
-    Transaction,
-    TxIn,
-    TxOut,
-    Txid,
+    bip32::Fingerprint, blockdata::weight, consensus, key::Secp256k1, opcodes, psbt::Input as PsbtIn, Address, Amount, OutPoint, PrivateKey, Psbt, PublicKey, Transaction, TxIn, TxOut, Txid
 };
 
 use itertools::Itertools;
@@ -55,6 +41,11 @@ pub struct EscrowWithdrawalTransaction {
     recipients: Vec<Recipient>,
     utxos: Vec<UtxoStruct>,
     psbt: Psbt
+}
+
+enum Denomination {
+    Weight,
+    VBytes
 }
 
 #[magnus::wrap(class = "CoinCrypto::Bindings::EscrowWithdrawalTransaction")]
@@ -294,6 +285,31 @@ impl MutEscrowWithdrawalTransaction {
         psbt.finalize(&secp)
     }
 
+    fn size(ruby: &Ruby, self_rb: &Self, denomination: Symbol) -> Result<u64, Error> {
+        let denomination = match denomination.to_string().as_str() {
+            "weight" => Ok(Denomination::Weight),
+            "vbytes" => Ok(Denomination::VBytes),
+            _ => Err(Error::new(ruby.exception_arg_error(), format!("Unknown denomination")))
+        }?;
+
+        let psbt = self_rb.finalize()
+            .map_err(|ers| ers.1.into_iter().map(|e| e.to_string()).join(", "))
+            .map_err_to_ruby(ruby.exception_arg_error())?;
+
+
+        let tx = psbt.extract_tx()
+            .map_err_to_ruby(ruby.exception_arg_error())?;
+
+        let weight = tx.weight();
+
+        Ok(
+            match denomination {
+                Denomination::VBytes => weight.to_vbytes_ceil(),
+                Denomination::Weight => weight.to_wu()
+            }
+        )
+    }
+
     fn to_signed_tx(ruby: &Ruby, self_rb: &Self) -> Result<String, Error> {
         let psbt = self_rb.finalize()
             .map_err(|ers| ers.1.into_iter().map(|e| e.to_string()).join(", "))
@@ -464,6 +480,10 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
     ewtx_coincrypto_class.define_method(
         "signed_by",
         method!(MutEscrowWithdrawalTransaction::signed_by, 0),
+    )?;
+    ewtx_coincrypto_class.define_method(
+        "size",
+        method!(MutEscrowWithdrawalTransaction::size, 1),
     )?;
 
     Ok(())
