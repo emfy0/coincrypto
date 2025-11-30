@@ -12,7 +12,7 @@ use bitcoin::{
 };
 
 use itertools::Itertools;
-use magnus::{function, method, prelude::*, Error, RClass, Ruby, Symbol};
+use magnus::{function, method, prelude::*, typed_data::Hash, Error, RClass, Ruby, Symbol};
 
 use miniscript::psbt::PsbtExt;
 
@@ -310,6 +310,18 @@ impl MutEscrowWithdrawalTransaction {
         )
     }
 
+    fn txid(ruby: &Ruby, self_rb: &Self) -> Result<String, Error> {
+        let psbt = self_rb.finalize()
+            .map_err(|ers| ers.1.into_iter().map(|e| e.to_string()).join(", "))
+            .map_err_to_ruby(ruby.exception_arg_error())?;
+
+
+        let tx = psbt.extract_tx()
+            .map_err_to_ruby(ruby.exception_arg_error())?;
+
+        Ok(tx.compute_txid().to_string())
+    }
+
     fn to_signed_tx(ruby: &Ruby, self_rb: &Self) -> Result<String, Error> {
         let psbt = self_rb.finalize()
             .map_err(|ers| ers.1.into_iter().map(|e| e.to_string()).join(", "))
@@ -480,6 +492,10 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
     ewtx_coincrypto_class.define_method(
         "signed_by",
         method!(MutEscrowWithdrawalTransaction::signed_by, 0),
+    )?;
+    ewtx_coincrypto_class.define_method(
+        "txid",
+        method!(MutEscrowWithdrawalTransaction::txid, 0),
     )?;
     ewtx_coincrypto_class.define_method(
         "size",

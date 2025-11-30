@@ -32,7 +32,7 @@ pub struct Escrow {
 }
 
 impl Escrow {
-    fn new(
+    fn create(
         ruby: &Ruby,
         blockchain_network: Symbol,
         kind: Symbol,
@@ -174,8 +174,8 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
     let mnemonic_coincrypto_class = coincrypto_class.define_class("Escrow", coincrypto_class)?;
 
     mnemonic_coincrypto_class.define_singleton_method(
-        "new",
-        function!(Escrow::new, 6),
+        "create",
+        function!(Escrow::create, 6),
     )?;
 
     mnemonic_coincrypto_class.define_method(

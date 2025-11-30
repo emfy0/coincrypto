@@ -31,18 +31,25 @@ impl ExtendedPrivateKeyWrapper {
         Ok(Self { xpriv })
     }
 
-    fn from_base58(ruby: &Ruby, base58_string: String, _network: String) -> Result<Self, magnus::Error> {
+    fn from_base58(ruby: &Ruby, base58_string: String) -> Result<Self, magnus::Error> {
         let xpriv = ExtendedPrivateKey::from_str(&base58_string)
             .map_err_to_ruby(ruby.exception_arg_error())?;
 
         Ok(Self { xpriv })
     }
 
-    fn is_valid(base58_string: String, _network: String) -> bool {
+    fn is_valid(base58_string: String) -> bool {
         ExtendedPrivateKey::from_str(&base58_string).is_ok()
     }
 
     fn derive(ruby: &Ruby, rb_self: &Self, path: String) -> Result<Self, magnus::Error> {
+        let path =
+            if !path.starts_with("m") {
+                format!("m/{path}")
+            } else {
+                path
+            };
+
         let path = DerivationPath::from_str(&path)
             .map_err_to_ruby(ruby.exception_arg_error())?;
 
@@ -82,11 +89,11 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
     )?;
     mnemonic_coincrypto_class.define_singleton_method(
         "from_base58",
-        function!(ExtendedPrivateKeyWrapper::from_base58, 2),
+        function!(ExtendedPrivateKeyWrapper::from_base58, 1),
     )?;
     mnemonic_coincrypto_class.define_singleton_method(
         "valid?",
-        function!(ExtendedPrivateKeyWrapper::is_valid, 2),
+        function!(ExtendedPrivateKeyWrapper::is_valid, 1),
     )?;
 
     mnemonic_coincrypto_class.define_method(

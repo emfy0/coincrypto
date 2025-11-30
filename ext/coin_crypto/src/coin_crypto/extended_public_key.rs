@@ -25,6 +25,13 @@ impl ExtendedPublicKeyWrapper {
     }
 
     fn derive(ruby: &Ruby, rb_self: &Self, path: String) -> Result<Self, magnus::Error> {
+        let path =
+            if !path.starts_with("m") {
+                format!("m/{path}")
+            } else {
+                path
+            };
+
         let path = DerivationPath::from_str(&path)
             .map_err_to_ruby(ruby.exception_arg_error())?;
 
