@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    coincrypto (0.1.0)
+    CoinCrypto (0.1.0)
       rb_sys (~> 0.9.39)
 
 GEM
@@ -54,7 +54,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  coincrypto!
+  CoinCrypto!
   irb
   rake (~> 13.0)
   rake-compiler (~> 1.2.0)

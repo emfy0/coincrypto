@@ -6,8 +6,8 @@ require "rspec/core/rake_task"
 
 RSpec::Core::RakeTask.new(:spec)
 
-Rake::ExtensionTask.new("coincrypto") do |c|
-  c.lib_dir = "lib/coincrypto"
+Rake::ExtensionTask.new("coin_crypto") do |c|
+  c.lib_dir = "lib/coin_crypto/bindings"
 end
 
 task default: :spec

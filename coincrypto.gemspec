@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "lib/coincrypto/version"
+require_relative "lib/coin_crypto/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "coincrypto"
-  spec.version = Coincrypto::VERSION
+  spec.name = "CoinCrypto"
+  spec.version = CoinCrypto::VERSION
   spec.authors = ["Pavel Egorov"]
   spec.email = ["pavel.egorov@hodlhodl.com"]
 
@@ -33,7 +33,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
-  spec.extensions = ["ext/coincrypto/extconf.rb"]
+  spec.extensions = ["ext/coin_crypto/extconf.rb"]
 
   # needed until rubygems supports Rust support is out of beta
   spec.add_dependency "rb_sys", "~> 0.9.39"

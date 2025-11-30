@@ -6,6 +6,6 @@
 /pkg/
 /spec/reports/
 /tmp/
-ext/coincrypto/target
+ext/coin_crypto/target
 # rspec failure tracking
 .rspec_status
