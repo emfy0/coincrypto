@@ -3,7 +3,7 @@
 require_relative "lib/coin_crypto/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "CoinCrypto"
+  spec.name = "coin_crypto"
   spec.version = CoinCrypto::VERSION
   spec.authors = ["Pavel Egorov"]
   spec.email = ["pavel.egorov@hodlhodl.com"]

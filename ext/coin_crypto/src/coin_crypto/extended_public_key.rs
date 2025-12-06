@@ -13,7 +13,7 @@ pub struct ExtendedPublicKeyWrapper {
 }
 
 impl ExtendedPublicKeyWrapper {
-    fn from_base58(ruby: &Ruby, base58_string: String, _network: String) -> Result<Self, magnus::Error> {
+    fn from_base58(ruby: &Ruby, base58_string: String) -> Result<Self, magnus::Error> {
         let xpub = ExtendedPublicKey::from_str(&base58_string)
             .map_err_to_ruby(ruby.exception_arg_error())?;
 
@@ -59,7 +59,7 @@ pub fn init(_ruby: &Ruby, coincrypto_class: RClass) -> Result<(), Error> {
 
     mnemonic_coincrypto_class.define_singleton_method(
         "from_base58",
-        function!(ExtendedPublicKeyWrapper::from_base58, 2),
+        function!(ExtendedPublicKeyWrapper::from_base58, 1),
     )?;
     mnemonic_coincrypto_class.define_singleton_method(
         "valid?",
